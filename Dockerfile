@@ -13,8 +13,8 @@ WORKDIR /app
 
 RUN git clone https://github.com/M47784U3R/smart-meter-kaifa-MA309 /app
 
-RUN mkdir -p /app/logs
+RUN mkdir -p logs
 
-RUN pip3 install -r /app/requirements/requirements.txt
+RUN pip3 install -r requirements/requirements.txt
 
 CMD ["python3", "smart-meter.py"]
