@@ -1,8 +1,20 @@
-FROM python:3
+FROM debian:latest
 
-RUN git clone https://github.com/M47784U3R/smart-meter-kaifa-MA309
+RUN apt-get update && apt-get install -y \
+    python3 \
+    python3-pip \
+    git \
+    sudo \
+    && apt-get clean
 
-RUN pip3 install -r /smart-meter-kaifa-MA309/requirements/requirements.txt
+RUN sudo rm -rf /usr/lib/python3.11/EXTERNALLY-MANAGED
 
-# expose port
-EXPOSE 5000
+WORKDIR /app
+
+RUN git clone https://github.com/M47784U3R/smart-meter-kaifa-MA309 /app
+
+RUN mkdir -p /app/logs
+
+RUN pip3 install -r /app/requirements/requirements.txt
+
+CMD ["python3", "smart-meter.py"]
