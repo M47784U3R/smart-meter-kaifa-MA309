@@ -1,0 +1,12 @@
+image: python:3.9
+
+stages:
+  - test
+
+unit_tests:
+  stage: test
+  before_script:
+    - pip install -r requirements/requirements.txt
+  script:
+    - python -m pytest tests/tests_smart_meter.py -v
+  coverage: '/TOTAL.+ ([0-9]{1,3}%)/' 
