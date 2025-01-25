@@ -8,6 +8,11 @@ import smart_meter
 
 
 class TestSmartMeter(unittest.TestCase):
+
+    def test_dummy(self):
+        self.assertEqual(True, True)
+        pass
+
     @patch('gurux_dlms.GXByteBuffer.GXByteBuffer')
     @patch('serial.Serial')
     @patch('time.sleep')
