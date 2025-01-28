@@ -1,15 +1,12 @@
-import sys
-import os
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
 import unittest
 from unittest.mock import patch, MagicMock
-import smart_meter
+from smart_meter import SmartMeter
 
 
 class TestSmartMeter(unittest.TestCase):
 
     def test_dummy(self):
+        smart_meter = SmartMeter()
         self.assertEqual(True, True)
         pass
 

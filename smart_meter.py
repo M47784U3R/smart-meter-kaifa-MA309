@@ -45,6 +45,7 @@ comport = os.getenv("COM_PORT", "None")
 
 print([smart_meter_key, debug_mode, log_file_path])
 
+'''
 # EVN Schlüssel eingeben zB. "36C66639E48A8CA4D6BC8B282A793BBB"
 evn_schluessel = smart_meter_key
 
@@ -174,3 +175,4 @@ while 1:
     #   print("Fehler: ", format(err))
 
     #   sys.exit()
+'''
