@@ -1,12 +1,37 @@
+import os
 import unittest
+from pathlib import Path
 from unittest.mock import patch, MagicMock
 from smart_meter import SmartMeter
 
 
 class TestSmartMeter(unittest.TestCase):
 
+    @patch('os.path.exists')
+    def test_check_path_not_exist(self, mock_exists):
+        mock_path = '/mock/path'
+        mock_exists.return_value = False
+
+        with self.assertRaises(FileNotFoundError):
+            SmartMeter('key', 'USB', mock_path, False)
+
+        mock_exists.assert_called_with(Path(mock_path))
+
+    @patch('os.path.exists')
+    @patch('os.access')
+    def test_check_path_not_accessible(self, mock_access, mock_exists):
+        mock_path = '/mock/path'
+        mock_exists.return_value = True
+        mock_access.return_value = False
+
+        with self.assertRaises(PermissionError):
+            SmartMeter('key', 'USB', mock_path, False)
+
+        mock_exists.assert_called_with(Path(mock_path))
+        mock_access.assert_called_with(Path(mock_path), os.R_OK)
+
     def test_dummy(self):
-        smart_meter = SmartMeter()
+        smart_meter = SmartMeter('key', 'USB', None, False)
         self.assertEqual(True, True)
         pass
 

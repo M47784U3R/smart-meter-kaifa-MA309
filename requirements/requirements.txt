@@ -7,3 +7,8 @@ cryptography==37.0.2
 datetime
 setuptools
 python-dotenv
+logging
+traceback
+datetime
+pathlib
+os
