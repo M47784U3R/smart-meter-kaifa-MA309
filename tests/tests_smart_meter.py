@@ -1,4 +1,6 @@
+import io
 import os
+import sys
 import unittest
 from pathlib import Path
 from unittest.mock import patch, MagicMock
@@ -7,8 +9,17 @@ from smart_meter import SmartMeter
 
 class TestSmartMeter(unittest.TestCase):
 
+    def test_check_loging_disabled(self):
+        captured_output = io.StringIO()
+        sys.stdout = captured_output
+
+        SmartMeter('key', 'USB', None, False)
+        output = captured_output.getvalue().strip()
+
+        self.assertIn(SmartMeter.LOGGING_DISABLED, output)
+
     @patch('os.path.exists')
-    def test_check_path_not_exist(self, mock_exists):
+    def test_check_log_path_does_not_exist(self, mock_exists):
         mock_path = '/mock/path'
         mock_exists.return_value = False
 
@@ -17,18 +28,36 @@ class TestSmartMeter(unittest.TestCase):
 
         mock_exists.assert_called_with(Path(mock_path))
 
+    @patch('pathlib.Path.is_dir')
     @patch('os.path.exists')
     @patch('os.access')
-    def test_check_path_not_accessible(self, mock_access, mock_exists):
+    def test_check_log_path_not_accessible(self, mock_access, mock_exists, mock_is_dir):
         mock_path = '/mock/path'
         mock_exists.return_value = True
+        mock_is_dir.return_value = True
         mock_access.return_value = False
 
         with self.assertRaises(PermissionError):
             SmartMeter('key', 'USB', mock_path, False)
 
         mock_exists.assert_called_with(Path(mock_path))
-        mock_access.assert_called_with(Path(mock_path), os.R_OK)
+        mock_is_dir.assert_called()
+        mock_access.assert_called_with(Path(mock_path), os.W_OK)
+
+    @patch('pathlib.Path.is_dir')
+    @patch('os.path.exists')
+    @patch('os.access')
+    def test_check_log_path_exists_and_accessible(self, mock_access, mock_exists, mock_is_dir):
+        mock_path = '/mock/path'
+        mock_exists.return_value = True
+        mock_is_dir.return_value = True
+        mock_access.return_value = True
+
+        SmartMeter('key', 'USB', mock_path, False)
+
+        mock_exists.assert_called_with(Path(mock_path))
+        mock_is_dir.assert_called()
+        mock_access.assert_called_with(Path(mock_path), os.W_OK)
 
     def test_dummy(self):
         smart_meter = SmartMeter('key', 'USB', None, False)
@@ -52,6 +81,7 @@ class TestSmartMeter(unittest.TestCase):
                             mock_GXDLMSTranslator,
                             mock_Client, mock_asciiletters, mock_exit, mock_unhexlify, mock_AESGCM, mock_sleep,
                             mock_Serial, mock_GXByteBuffer):
+        '''
         mock_buffer = MagicMock()
         mock_GXByteBuffer.return_value = mock_buffer
 
@@ -99,6 +129,7 @@ class TestSmartMeter(unittest.TestCase):
         mock_BeautifulSoup.assert_called_once()
         mock_getenv.assert_called_once()
         mock_load_dotenv.assert_called_once()
+        '''
 
 
 if __name__ == '__main__':

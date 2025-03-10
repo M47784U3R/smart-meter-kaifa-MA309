@@ -20,6 +20,8 @@ from pathlib import Path
 
 class SmartMeter:
 
+    LOGGING_DISABLED = "Logging disabled"
+
     # @param string key: The key that is provided by the operator (e.g. EVN)
     __smart_meter_key: string
     # @param string com_port: Name of the com port that is used for connecting to the smart meter
@@ -46,20 +48,22 @@ class SmartMeter:
         self.__log_file_path = log_path
         self.__debug_mode = debug
         self.__validate_variables()
+        self.__init_logging()
+        # self.__connect_to_com_device()
         return
 
     def __validate_variables(self):
         print([self.__smart_meter_key, self.__debug_mode, self.__log_file_path, self.__com_port])
-        self.__init_logging()
-        self.__connect_to_com_device()
         return
 
     def __init_logging(self):
         if self.__log_file_path is None:
-            print("Logging disabled")
+            print(self.LOGGING_DISABLED)
         else:
 
             if self.__validate_path():
+
+                return True
 
                 # --- ERROR LOGGING (nicht löschen) ---
                 # Fehler-Log in einem spezifischen Verzeichnis speichern
