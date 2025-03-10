@@ -8,9 +8,5 @@ datetime
 setuptools
 python-dotenv
 logging
-traceback
 datetime
 pathlib
-os
-io
-sys
