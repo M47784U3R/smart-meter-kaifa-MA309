@@ -5,7 +5,7 @@ Based on [the SmartMeterEVNKaifaMA309](https://github.com/greenMikeEU/SmartMeter
 
 ![Build Status](https://github.com/M47784U3R/smart-meter-kaifa-MA309/actions/workflows/python-app.yml/badge.svg)
 
-![Gitlab Code Coverage](https://img.shields.io/gitlab/pipeline-coverage/:project)
+![Gitlab Code Coverage](https://img.shields.io/gitlab/pipeline-coverage/:M47784U3R/smart-meter-kaifa-MA309)
 
 ![Dependabot Status](https://api.dependabot.com/badges/status?host=github&repo=M47784U3R/smart-meter-kaifa-MA309)
 
