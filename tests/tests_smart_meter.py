@@ -64,7 +64,7 @@ class TestSmartMeter(unittest.TestCase):
         self.assertEqual(True, True)
         pass
 
-    @patch('gurux_dlms.GXByteBuffer.GXByteBuffer')
+    @patch('gurux_dlms.GXByteBuffer')
     @patch('serial.Serial')
     @patch('time.sleep')
     @patch('cryptography.hazmat.primitives.ciphers.aead.AESGCM')
