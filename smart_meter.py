@@ -22,91 +22,75 @@ class SmartMeter:
 
     LOGGING_DISABLED = "Logging disabled"
 
-    # @param string key: The key that is provided by the operator (e.g. EVN)
-    __smart_meter_key: string
-    # @param string com_port: Name of the com port that is used for connecting to the smart meter
-    __com_port: string
-    # @param string log_path: defines the path that is used for storing the SmartMeter logs. Logging is disabled if
-    #                         not set.
-    __log_file_path: string = None
-    # @param bool debug: Activates/disables the debug mode. Default: false
+    # @var str key: The key that is provided by the operator (e.g. EVN)
+    __smart_meter_key: str
+    # @var str com_port: Name of the com port that is used for connecting to the smart meter
+    __com_port: str
+    # @var bool debug: Activates/disables the debug mode. Default: false
     __debug_mode: bool = False
+    # @var Logger info_logger: Log file used for storing informational logs
+    __info_logger: logging.Logger = None
+    # @var Logger error_logger: Log file used for storing error logs
+    __error_logger: logging.Logger = None
 
-    def __init__(self, key: string, com_port: string, log_path: string = None, debug: bool = False):
+    def __init__(self, key: str, com_port: str, log_path: str = None, debug: bool = False):
         """
         Initializes the SmartMeter class and sets the required values to connect to the smart meter and read out its data
 
-        @param string key: The key that is provided by the operator (e.g. EVN)
-        @param string com_port: Name of the com port that is used for connecting to the smart meter
-        @param string log_path: defines the path that is used for storing the SmartMeter logs. Logging is disabled if
+        @param str key: The key that is provided by the operator (e.g. EVN)
+        @param str com_port: Name of the com port that is used for connecting to the smart meter
+        @param str log_path: defines the path that is used for storing the SmartMeter logs. Logging is disabled if
         not set.
         @param bool debug: Activates/disables the debug mode. Default: false
-        @return: None
+        @return: self
         """
         self.__smart_meter_key = key
         self.__com_port = com_port
-        self.__log_file_path = log_path
         self.__debug_mode = debug
         self.__validate_variables()
-        self.__init_logging()
+        self.__init_logging(log_path)
+        self.__log_info("SmartMeter started")
         # self.__connect_to_com_device()
-        return
-
+        return None
     def __validate_variables(self):
-        print([self.__smart_meter_key, self.__debug_mode, self.__log_file_path, self.__com_port])
         return
 
-    def __init_logging(self):
-        if self.__log_file_path is None:
+    def __add_trailing_slash(self, path: str) -> str:
+        return os.path.join(path, '')
+
+    def __init_logging(self, log_path):
+        if log_path is None:
             print(self.LOGGING_DISABLED)
         else:
 
-            if self.__validate_path():
+            if self.__validate_path(log_path):
 
-                return True
-
-                # --- ERROR LOGGING (nicht löschen) ---
-                # Fehler-Log in einem spezifischen Verzeichnis speichern
-                error_handler = logging.FileHandler("error.log")  # Fehler-Logs in eine Datei schreiben
+                error_handler = logging.FileHandler(self.__add_trailing_slash(log_path) + "error.log")
                 error_handler.setLevel(logging.ERROR)
 
-                # Formatierung der Fehler-Logs
                 error_formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
                 error_handler.setFormatter(error_formatter)
 
-                # Logger für Fehler
-                error_logger = logging.getLogger('error')
-                error_logger.setLevel(logging.ERROR)
-                error_logger.addHandler(error_handler)
+                __error_logger = logging.getLogger('error')
+                __error_logger.setLevel(logging.ERROR)
+                __error_logger.addHandler(error_handler)
+                print(__error_logger)
 
-                # --- INFO LOGGING (täglich rotieren, 14 Tage behalten) ---
-                info_handler = TimedRotatingFileHandler(
-                    "info_logs.log",  # Basis-Dateiname für Info-Logs
-                    when="midnight",  # Tägliche Rotation um Mitternacht
-                    interval=1,  # Alle 1 Tag rotieren
-                    backupCount=14  # Maximal 14 Tage aufbewahren
+                info_handler = logging.handlers.TimedRotatingFileHandler(
+                    self.__add_trailing_slash(log_path) + "info.log",
+                    when="midnight",
+                    interval=1,
+                    backupCount=14
                 )
+                print(info_handler)
                 info_handler.setLevel(logging.INFO)
 
-                # Formatierung der Info-Logs
                 info_formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
                 info_handler.setFormatter(info_formatter)
 
-                # Logger für Info
-                info_logger = logging.getLogger('info')
-                info_logger.setLevel(logging.INFO)
-                info_logger.addHandler(info_handler)
-
-                # --- Beispiel für Log-Erstellung ---
-                try:
-                    x = 1 / 0  # Beispiel für einen Fehler (Division durch 0)
-                except Exception as e:
-                    # Error-Log mit Traceback
-                    error_logger.error("Fehler aufgetreten:\n" + traceback.format_exc())  # Traceback hinzufügen
-
-                info_logger.info("Info-Log: Programm gestartet.")  # Info-Log
-
-                print("Logging to path: " + self.__log_file_path)
+                __info_logger = logging.getLogger('info')
+                __info_logger.setLevel(logging.INFO)
+                __info_logger.addHandler(info_handler)
 
     def __connect_to_com_device(self):
         try:
@@ -119,13 +103,22 @@ class SmartMeter:
         except Exception as e:
             print(e)
 
-    def __validate_path(self):
-        path = Path(self.__log_file_path)
+    def __validate_path(self, log_path) -> bool:
+        path = Path(log_path)
         if not os.path.exists(path):
-            raise FileNotFoundError("The specified path '" + self.__log_file_path + "' does not exist")
+            raise FileNotFoundError("The specified path '" + log_path + "' does not exist")
         if not path.is_dir() or not os.access(path, os.W_OK):
-            raise PermissionError("The specified path '" + self.__log_file_path + "' is not accessible")
+            raise PermissionError("The specified path '" + log_path + "' is not accessible")
         return True
+
+    def __log_error(self, message: string) -> None:
+        if self.__error_logger is not None:
+            self.__error_logger.error(message + traceback.format_exc())
+
+    def __log_info(self, message: string) -> None:
+        if self.__info_logger is not None:
+            self.__info_logger.info(message)
+
 
 
 '''

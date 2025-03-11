@@ -1,4 +1,5 @@
 import io
+import logging
 import os
 import sys
 import unittest
@@ -44,20 +45,43 @@ class TestSmartMeter(unittest.TestCase):
         mock_is_dir.assert_called()
         mock_access.assert_called_with(Path(mock_path), os.W_OK)
 
+    @patch("logging.handlers.TimedRotatingFileHandler")
+    @patch("logging.FileHandler")
     @patch('pathlib.Path.is_dir')
     @patch('os.path.exists')
     @patch('os.access')
-    def test_check_log_path_exists_and_accessible(self, mock_access, mock_exists, mock_is_dir):
+    def test_check_log_path_exists_and_accessible(self, mock_access, mock_exists, mock_is_dir, mock_file_handler,
+                                                  mock_timed_handler):
         mock_path = '/mock/path'
         mock_exists.return_value = True
         mock_is_dir.return_value = True
         mock_access.return_value = True
+
+        mock_file_handler_instance = MagicMock()
+        mock_timed_handler_instance = MagicMock()
+        mock_file_handler.return_value = mock_file_handler_instance
+        mock_timed_handler.return_value = mock_timed_handler_instance
 
         SmartMeter('key', 'USB', mock_path, False)
 
         mock_exists.assert_called_with(Path(mock_path))
         mock_is_dir.assert_called()
         mock_access.assert_called_with(Path(mock_path), os.W_OK)
+
+        mock_file_handler.assert_called_once_with(mock_path + "/error.log")
+
+        mock_timed_handler.assert_called_once_with(
+            mock_path + "/info.log",
+            when="midnight",
+            interval=1,
+            backupCount=14
+        )
+
+        mock_file_handler_instance.setLevel.assert_called_once_with(logging.ERROR)
+        mock_timed_handler_instance.setLevel.assert_called_once_with(logging.INFO)
+
+        mock_file_handler_instance.setFormatter.assert_called_once()
+        mock_timed_handler_instance.setFormatter.assert_called_once()
 
     def test_dummy(self):
         smart_meter = SmartMeter('key', 'USB', None, False)
