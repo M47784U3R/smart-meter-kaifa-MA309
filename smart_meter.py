@@ -32,6 +32,8 @@ class SmartMeter:
     __info_logger: logging.Logger = None
     # @var Logger error_logger: Log file used for storing error logs
     __error_logger: logging.Logger = None
+    # @var Serial serial_connection Connection to the USB dongle that is connected to the smart meter
+    __serial_connection: serial.Serial
 
     def __init__(self, key: str, com_port: str, log_path: str = None, debug: bool = False):
         """
@@ -94,12 +96,13 @@ class SmartMeter:
 
     def __connect_to_com_device(self):
         try:
-            ser = serial.Serial(port=self.__com_port,
-                                baudrate=2400,
-                                bytesize=serial.EIGHTBITS,
-                                parity=serial.PARITY_NONE,
-                                )
-            print(ser)
+            __serial_connection = serial.Serial(
+                port=self.__com_port,
+                baudrate=2400,
+                bytesize=serial.EIGHTBITS,
+                parity=serial.PARITY_NONE
+            )
+            print(__serial_connection)
         except Exception as e:
             print(e)
 
