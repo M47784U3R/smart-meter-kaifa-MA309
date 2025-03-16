@@ -12,22 +12,21 @@ from gurux_dlms.GXDLMSTranslatorMessage import GXDLMSTranslatorMessage
 from bs4 import BeautifulSoup
 from dotenv import load_dotenv
 import logging
-from logging.handlers import TimedRotatingFileHandler
+from logging.handlers import TimedRotatingFileHandler, MemoryHandler
 import traceback
 from datetime import datetime
 from pathlib import Path
 
 
 class SmartMeter:
-
     LOGGING_DISABLED = "Logging disabled"
 
     # @var str key: The key that is provided by the operator (e.g. EVN)
     __smart_meter_key: str
     # @var str com_port: Name of the com port that is used for connecting to the smart meter
     __com_port: str
-    # @var bool debug: Activates/disables the debug mode. Default: false
-    __debug_mode: bool = False
+    # @var bool verbose_mode: Activates/disables the debug mode. Default: false
+    __verbose_mode: bool = False
     # @var Logger info_logger: Log file used for storing informational logs
     __info_logger: logging.Logger = None
     # @var Logger error_logger: Log file used for storing error logs
@@ -35,7 +34,7 @@ class SmartMeter:
     # @var Serial serial_connection Connection to the USB dongle that is connected to the smart meter
     __serial_connection: serial.Serial
 
-    def __init__(self, key: str, com_port: str, log_path: str = None, debug: bool = False):
+    def __init__(self, key: str, com_port: str, log_path: str = None, verbose: bool = False):
         """
         Initializes the SmartMeter class and sets the required values to connect to the smart meter and read out its data
 
@@ -43,17 +42,18 @@ class SmartMeter:
         @param str com_port: Name of the com port that is used for connecting to the smart meter
         @param str log_path: defines the path that is used for storing the SmartMeter logs. Logging is disabled if
         not set.
-        @param bool debug: Activates/disables the debug mode. Default: false
+        @param bool verbose: Activates/disables the verbose mode. Default: false
         @return: self
         """
         self.__smart_meter_key = key
         self.__com_port = com_port
-        self.__debug_mode = debug
+        self.__verbose_mode = verbose
         self.__validate_variables()
         self.__init_logging(log_path)
         self.__log_info("SmartMeter started")
         # self.__connect_to_com_device()
         return None
+
     def __validate_variables(self):
         return
 
@@ -66,17 +66,22 @@ class SmartMeter:
         else:
 
             if self.__validate_path(log_path):
-
                 error_handler = logging.FileHandler(self.__add_trailing_slash(log_path) + "error.log")
                 error_handler.setLevel(logging.ERROR)
 
-                error_formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
-                error_handler.setFormatter(error_formatter)
+                formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
+                if self.__verbose_mode:
+                    console_handler = logging.StreamHandler()
+                    console_handler.setFormatter(formatter)
 
-                __error_logger = logging.getLogger('error')
-                __error_logger.setLevel(logging.ERROR)
-                __error_logger.addHandler(error_handler)
-                print(__error_logger)
+                error_handler.setFormatter(formatter)
+
+                self.__error_logger = logging.getLogger('error')
+                self.__error_logger.setLevel(logging.ERROR)
+                self.__error_logger.addHandler(error_handler)
+                if self.__verbose_mode:
+                    print("init console logging")
+                    self.__error_logger.addHandler(console_handler)
 
                 info_handler = logging.handlers.TimedRotatingFileHandler(
                     self.__add_trailing_slash(log_path) + "info.log",
@@ -84,15 +89,17 @@ class SmartMeter:
                     interval=1,
                     backupCount=14
                 )
-                print(info_handler)
                 info_handler.setLevel(logging.INFO)
 
-                info_formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
-                info_handler.setFormatter(info_formatter)
+                info_handler.setFormatter(formatter)
 
-                __info_logger = logging.getLogger('info')
-                __info_logger.setLevel(logging.INFO)
-                __info_logger.addHandler(info_handler)
+                self.__info_logger = logging.getLogger('info')
+                self.__info_logger.setLevel(logging.INFO)
+                self.__info_logger.addHandler(info_handler)
+
+                if self.__verbose_mode:
+                    print("init console logging")
+                    self.__info_logger.addHandler(console_handler)
 
     def __connect_to_com_device(self):
         try:
@@ -119,10 +126,10 @@ class SmartMeter:
             self.__error_logger.error(message + traceback.format_exc())
 
     def __log_info(self, message: string) -> None:
+        print("LOGGING INFO")
         if self.__info_logger is not None:
+            print("LOG INFO: " + message)
             self.__info_logger.info(message)
-
-
 
 '''
 # EVN Schlüssel eingeben zB. "36C66639E48A8CA4D6BC8B282A793BBB"
