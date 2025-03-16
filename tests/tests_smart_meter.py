@@ -59,8 +59,11 @@ class TestSmartMeter(unittest.TestCase):
         mock_is_dir.return_value = True
 
         mock_file_handler_instance = MagicMock()
+        mock_file_handler_instance.level = logging.WARNING
         mock_timed_handler_instance = MagicMock()
+        mock_timed_handler_instance.level = logging.WARNING
         mock_stream_handler_instance = MagicMock()
+        mock_stream_handler_instance.level = logging.WARNING
         mock_file_handler.return_value = mock_file_handler_instance
         mock_timed_handler.return_value = mock_timed_handler_instance
         mock_stream_handler.return_value = mock_stream_handler_instance
