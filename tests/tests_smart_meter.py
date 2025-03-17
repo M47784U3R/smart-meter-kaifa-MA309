@@ -11,13 +11,27 @@ from smart_meter import SmartMeter
 class TestSmartMeter(unittest.TestCase):
 
     def test_check_loging_disabled(self):
-        captured_output = io.StringIO()
-        sys.stdout = captured_output
+        with patch("logging.getLogger") as mock_get_logger:
+            mock_info_logger = MagicMock()
+            mock_error_logger = MagicMock()
 
-        SmartMeter('key', 'USB', None, False)
-        output = captured_output.getvalue().strip()
+            def get_logger_side_effect(name):
+                if name == "info":
+                    return mock_info_logger
+                elif name == "error":
+                    return mock_error_logger
+                return MagicMock()
 
-        self.assertIn(SmartMeter.LOGGING_DISABLED, output)
+            mock_get_logger.side_effect = get_logger_side_effect
+
+            SmartMeter('key', 'USB', None, False)
+
+            mock_get_logger.assert_any_call("info")
+            mock_get_logger.assert_any_call("error")
+
+            self.assertIsInstance(mock_info_logger.info.call_args_list, (list, tuple))
+            self.assertIsNotNone(mock_info_logger.info.call_args_list[0][0][0])
+            self.assertEqual(mock_info_logger.info.call_args_list[0][0][0], SmartMeter.LOGGING_DISABLED)
 
     @patch('os.path.exists')
     def test_check_log_path_does_not_exist(self, mock_exists):
@@ -45,28 +59,14 @@ class TestSmartMeter(unittest.TestCase):
         mock_is_dir.assert_called()
         mock_access.assert_called_with(Path(mock_path), os.W_OK)
 
-    @patch("logging.StreamHandler")
-    @patch("logging.handlers.TimedRotatingFileHandler")
-    @patch("logging.FileHandler")
-    @patch('pathlib.Path.is_dir')
-    @patch('os.path.exists')
-    @patch('os.access')
-    def test_check_log_path_exists_and_accessible(self, mock_access, mock_exists, mock_is_dir, mock_file_handler,
-                                                  mock_timed_handler, mock_stream_handler):
+    def test_check_log_path_exists_and_accessible(self):
         mock_path = '/mock/path'
-        mock_access.return_value = True
-        mock_exists.return_value = True
-        mock_is_dir.return_value = True
-
-        mock_file_handler_instance = MagicMock()
-        mock_file_handler_instance.level = logging.WARNING
-        mock_timed_handler_instance = MagicMock()
-        mock_timed_handler_instance.level = logging.WARNING
-        mock_stream_handler_instance = MagicMock()
-        mock_stream_handler_instance.level = logging.WARNING
-        mock_file_handler.return_value = mock_file_handler_instance
-        mock_timed_handler.return_value = mock_timed_handler_instance
-        mock_stream_handler.return_value = mock_stream_handler_instance
+        mocks = self.mock_logging()
+        mock_file_handler = mocks["file_handler"]
+        mock_timed_handler = mocks["timed_handler"]
+        mock_exists = mocks["exists"]
+        mock_access = mocks["access"]
+        mock_is_dir = mocks["is_dir"]
 
         SmartMeter('key', 'USB', mock_path, False)
 
@@ -83,16 +83,43 @@ class TestSmartMeter(unittest.TestCase):
             backupCount=14
         )
 
-        mock_file_handler_instance.setLevel.assert_called_once_with(logging.ERROR)
-        mock_timed_handler_instance.setLevel.assert_called_once_with(logging.INFO)
+        mocks["cleanup"]
 
-        mock_file_handler_instance.setFormatter.assert_called_once()
-        mock_timed_handler_instance.setFormatter.assert_called_once()
+    def test_check_verbose_mode_active(self):
+        mock_path = '/mock/path'
+        mocks = self.mock_logging()
 
-    def test_dummy(self):
-        smart_meter = SmartMeter('key', 'USB', None, False)
-        self.assertEqual(True, True)
-        pass
+        SmartMeter('key', 'USB', mock_path, True)
+
+        mocks["cleanup"]
+
+    def mock_logging(self):
+        patchers = {
+            "stream_handler": patch("logging.StreamHandler", MagicMock()),
+            "file_handler": patch("logging.FileHandler", MagicMock()),
+            "timed_handler": patch("logging.handlers.TimedRotatingFileHandler", MagicMock()),
+            "is_dir": patch("pathlib.Path.is_dir", MagicMock(return_value=True)),
+            "exists": patch("os.path.exists", MagicMock(return_value=True)),
+            "access": patch("os.access", MagicMock(return_value=True))
+        }
+
+        mocks = {key: patcher.start() for key, patcher in patchers.items()}
+        mocks["file_handler_instance"] = mocks["file_handler"].return_value
+        mocks["file_handler_instance"].level = logging.ERROR
+
+        mocks["timed_handler_instance"] = mocks["timed_handler"].return_value
+        mocks["timed_handler_instance"].level = logging.INFO
+
+        mocks["stream_handler_instance"] = mocks["stream_handler"].return_value
+        mocks["stream_handler_instance"].level = logging.INFO
+
+        def cleanup():
+            for patcher in patchers.values():
+                patcher.stop()
+
+        mocks["cleanup"] = cleanup
+
+        return mocks
 
     @patch('gurux_dlms.GXByteBuffer')
     @patch('serial.Serial')

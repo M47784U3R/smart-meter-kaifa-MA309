@@ -1,4 +1,6 @@
 import os
+from typing import Optional
+
 from gurux_dlms.GXByteBuffer import GXByteBuffer
 import serial
 import time
@@ -19,7 +21,7 @@ from pathlib import Path
 
 
 class SmartMeter:
-    LOGGING_DISABLED = "Logging disabled"
+    LOGGING_DISABLED = "Logging to file disabled"
 
     # @var str key: The key that is provided by the operator (e.g. EVN)
     __smart_meter_key: str
@@ -51,6 +53,7 @@ class SmartMeter:
         self.__validate_variables()
         self.__init_logging(log_path)
         self.__log_info("SmartMeter started")
+        self.__log_error("Test error")
         # self.__connect_to_com_device()
         return None
 
@@ -61,45 +64,45 @@ class SmartMeter:
         return os.path.join(path, '')
 
     def __init_logging(self, log_path):
+        if self.__validate_path(log_path):
+            error_handler = logging.FileHandler(self.__add_trailing_slash(log_path) + "error.log")
+            error_handler.setLevel(logging.ERROR)
+
+        formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
+        if self.__verbose_mode:
+            console_handler = logging.StreamHandler()
+            console_handler.setFormatter(formatter)
+
+        if self.__validate_path(log_path):
+            error_handler.setFormatter(formatter)
+
+        self.__error_logger = logging.getLogger('error')
+        self.__error_logger.setLevel(logging.ERROR)
+        if self.__validate_path(log_path):
+            self.__error_logger.addHandler(error_handler)
+        if self.__verbose_mode:
+            self.__error_logger.addHandler(console_handler)
+
+        if self.__validate_path(log_path):
+            info_handler = logging.handlers.TimedRotatingFileHandler(
+                self.__add_trailing_slash(log_path) + "info.log",
+                when="midnight",
+                interval=1,
+                backupCount=14
+            )
+            info_handler.setLevel(logging.INFO)
+            info_handler.setFormatter(formatter)
+
+        self.__info_logger = logging.getLogger('info')
+        self.__info_logger.setLevel(logging.INFO)
+        if self.__validate_path(log_path):
+            self.__info_logger.addHandler(info_handler)
+
+        if self.__verbose_mode:
+            self.__info_logger.addHandler(console_handler)
+
         if log_path is None:
-            print(self.LOGGING_DISABLED)
-        else:
-
-            if self.__validate_path(log_path):
-                error_handler = logging.FileHandler(self.__add_trailing_slash(log_path) + "error.log")
-                error_handler.setLevel(logging.ERROR)
-
-                formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
-                if self.__verbose_mode:
-                    console_handler = logging.StreamHandler()
-                    console_handler.setFormatter(formatter)
-
-                error_handler.setFormatter(formatter)
-
-                self.__error_logger = logging.getLogger('error')
-                self.__error_logger.setLevel(logging.ERROR)
-                self.__error_logger.addHandler(error_handler)
-                if self.__verbose_mode:
-                    print("init console logging")
-                    self.__error_logger.addHandler(console_handler)
-
-                info_handler = logging.handlers.TimedRotatingFileHandler(
-                    self.__add_trailing_slash(log_path) + "info.log",
-                    when="midnight",
-                    interval=1,
-                    backupCount=14
-                )
-                info_handler.setLevel(logging.INFO)
-
-                info_handler.setFormatter(formatter)
-
-                self.__info_logger = logging.getLogger('info')
-                self.__info_logger.setLevel(logging.INFO)
-                self.__info_logger.addHandler(info_handler)
-
-                if self.__verbose_mode:
-                    print("init console logging")
-                    self.__info_logger.addHandler(console_handler)
+            self.__info_logger.info(self.LOGGING_DISABLED)
 
     def __connect_to_com_device(self):
         try:
@@ -113,22 +116,23 @@ class SmartMeter:
         except Exception as e:
             print(e)
 
-    def __validate_path(self, log_path) -> bool:
-        path = Path(log_path)
-        if not os.path.exists(path):
-            raise FileNotFoundError("The specified path '" + log_path + "' does not exist")
-        if not path.is_dir() or not os.access(path, os.W_OK):
-            raise PermissionError("The specified path '" + log_path + "' is not accessible")
-        return True
+    def __validate_path(self, log_path: Optional[str] = None) -> bool:
+        if log_path is not None:
+            path = Path(log_path)
+            if not os.path.exists(path):
+                raise FileNotFoundError("The specified path '" + log_path + "' does not exist")
+            if not path.is_dir() or not os.access(path, os.W_OK):
+                raise PermissionError("The specified path '" + log_path + "' is not accessible")
+            return True
+        else:
+            return False
 
     def __log_error(self, message: string) -> None:
         if self.__error_logger is not None:
             self.__error_logger.error(message + traceback.format_exc())
 
     def __log_info(self, message: string) -> None:
-        print("LOGGING INFO")
         if self.__info_logger is not None:
-            print("LOG INFO: " + message)
             self.__info_logger.info(message)
 
 '''

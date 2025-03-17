@@ -6,6 +6,6 @@ load_dotenv()
 smartMeter = SmartMeter(
     os.getenv("SMART_METER_KEY", "None"),
     os.getenv("COM_PORT", "None"),
-    os.getenv("LOG_FILE_PATH", "/app/logs/"),
+    os.getenv("LOG_FILE_PATH", None),
     os.getenv("VERBOSE", "false").lower() == "true"
 )
