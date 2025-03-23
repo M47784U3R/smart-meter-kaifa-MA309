@@ -51,14 +51,10 @@ class SmartMeter:
         self.__smart_meter_key = key
         self.__com_port = com_port
         self.__verbose_mode = verbose
-        self.__validate_variables()
         self.__init_logging(log_path)
         self.__log_info("SmartMeter started")
-        # self.__connect_to_com_device()
+        #self.__connect_to_com_device()
         return None
-
-    def __validate_variables(self):
-        return
 
     def __add_trailing_slash(self, path: str) -> str:
         return os.path.join(path, '')
@@ -74,12 +70,12 @@ class SmartMeter:
         handler = None
         console_handler = None
         formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
-        if log_type is 'error':
+        if log_type == 'error':
             log_level = logging.ERROR
         else:
             log_level = logging.INFO
         if self.__validate_path(log_path):
-            if log_type is 'error':
+            if log_type == 'error':
                 handler = logging.FileHandler(self.__add_trailing_slash(log_path) + "error.log")
                 handler.setLevel(log_level)
             else:
@@ -113,9 +109,11 @@ class SmartMeter:
                 bytesize=serial.EIGHTBITS,
                 parity=serial.PARITY_NONE
             )
-            print(__serial_connection)
+            print("CONN: " + __serial_connection)
         except Exception as e:
-            print(e)
+            error_messages = " | ".join(map(str, e.args))
+            self.__log_error(error_messages)
+            raise e
 
     def __validate_path(self, log_path: Optional[str] = None) -> bool:
         if log_path is not None:
