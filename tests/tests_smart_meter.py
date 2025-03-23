@@ -10,7 +10,7 @@ from smart_meter import SmartMeter
 
 class TestSmartMeter(unittest.TestCase):
 
-    def test_check_loging_disabled(self):
+    def test_check_logging_disabled(self):
         with patch("logging.getLogger") as mock_get_logger:
             mock_info_logger = MagicMock()
             mock_error_logger = MagicMock()
@@ -25,6 +25,24 @@ class TestSmartMeter(unittest.TestCase):
             mock_get_logger.side_effect = get_logger_side_effect
 
             SmartMeter('key', 'USB', None, False)
+
+            self.assertCountEqual(mock_info_logger.info.call_args_list, [])
+
+    def test_check_logging_disabled_and_verbose_is_on(self):
+        with patch("logging.getLogger") as mock_get_logger:
+            mock_info_logger = MagicMock()
+            mock_error_logger = MagicMock()
+
+            def get_logger_side_effect(name):
+                if name == "info":
+                    return mock_info_logger
+                elif name == "error":
+                    return mock_error_logger
+                return MagicMock()
+
+            mock_get_logger.side_effect = get_logger_side_effect
+
+            SmartMeter('key', 'USB', None, True)
 
             mock_get_logger.assert_any_call("info")
             mock_get_logger.assert_any_call("error")
@@ -83,15 +101,32 @@ class TestSmartMeter(unittest.TestCase):
             backupCount=14
         )
 
-        mocks["cleanup"]
+        mocks["cleanup"]()
 
-    def test_check_verbose_mode_active(self):
-        mock_path = '/mock/path'
-        mocks = self.mock_logging()
+    def test_check_logging_to_file_and_verbose_are_enabled(self):
+        with patch("logging.getLogger") as mock_get_logger:
+            mock_info_logger = MagicMock()
+            mock_error_logger = MagicMock()
 
-        SmartMeter('key', 'USB', mock_path, True)
+            def get_logger_side_effect(name):
+                if name == "info":
+                    return mock_info_logger
+                elif name == "error":
+                    return mock_error_logger
+                return MagicMock()
 
-        mocks["cleanup"]
+            mock_get_logger.side_effect = get_logger_side_effect
+
+            mock_path = '/mock/path'
+            mocks = self.mock_logging()
+
+            SmartMeter('key', 'USB', mock_path, True)
+
+            self.assertIsInstance(mock_info_logger.info.call_args_list, (list, tuple))
+            self.assertIsNotNone(mock_info_logger.info.call_args_list[0][0][0])
+            self.assertEqual(mock_info_logger.info.call_args_list[0][0][0], SmartMeter.SMART_METER_STARTED)
+
+        mocks["cleanup"]()
 
     def mock_logging(self):
         patchers = {

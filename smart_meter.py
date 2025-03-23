@@ -22,6 +22,7 @@ from pathlib import Path
 
 class SmartMeter:
     LOGGING_DISABLED = "Logging to file disabled"
+    SMART_METER_STARTED = "SmartMeter started"
 
     # @var str key: The key that is provided by the operator (e.g. EVN)
     __smart_meter_key: str
@@ -53,7 +54,6 @@ class SmartMeter:
         self.__validate_variables()
         self.__init_logging(log_path)
         self.__log_info("SmartMeter started")
-        self.__log_error("Test error")
         # self.__connect_to_com_device()
         return None
 
@@ -64,45 +64,46 @@ class SmartMeter:
         return os.path.join(path, '')
 
     def __init_logging(self, log_path):
-        if self.__validate_path(log_path):
-            error_handler = logging.FileHandler(self.__add_trailing_slash(log_path) + "error.log")
-            error_handler.setLevel(logging.ERROR)
+        self.__error_logger = self.__init_logger('error', log_path)
+        self.__info_logger = self.__init_logger('info', log_path)
 
+        if log_path is None and self.__info_logger is not None:
+            self.__info_logger.info(self.LOGGING_DISABLED)
+
+    def __init_logger(self, log_type: str, log_path):
+        handler = None
+        console_handler = None
         formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
+        if log_type is 'error':
+            log_level = logging.ERROR
+        else:
+            log_level = logging.INFO
+        if self.__validate_path(log_path):
+            if log_type is 'error':
+                handler = logging.FileHandler(self.__add_trailing_slash(log_path) + "error.log")
+                handler.setLevel(log_level)
+            else:
+                handler = logging.handlers.TimedRotatingFileHandler(
+                    self.__add_trailing_slash(log_path) + "info.log",
+                    when="midnight",
+                    interval=1,
+                    backupCount=14
+                )
+                handler.setLevel(log_level)
+                handler.setFormatter(formatter)
         if self.__verbose_mode:
             console_handler = logging.StreamHandler()
             console_handler.setFormatter(formatter)
-
-        if self.__validate_path(log_path):
-            error_handler.setFormatter(formatter)
-
-        self.__error_logger = logging.getLogger('error')
-        self.__error_logger.setLevel(logging.ERROR)
-        if self.__validate_path(log_path):
-            self.__error_logger.addHandler(error_handler)
-        if self.__verbose_mode:
-            self.__error_logger.addHandler(console_handler)
-
-        if self.__validate_path(log_path):
-            info_handler = logging.handlers.TimedRotatingFileHandler(
-                self.__add_trailing_slash(log_path) + "info.log",
-                when="midnight",
-                interval=1,
-                backupCount=14
-            )
-            info_handler.setLevel(logging.INFO)
-            info_handler.setFormatter(formatter)
-
-        self.__info_logger = logging.getLogger('info')
-        self.__info_logger.setLevel(logging.INFO)
-        if self.__validate_path(log_path):
-            self.__info_logger.addHandler(info_handler)
-
-        if self.__verbose_mode:
-            self.__info_logger.addHandler(console_handler)
-
-        if log_path is None:
-            self.__info_logger.info(self.LOGGING_DISABLED)
+        logger = logging.getLogger(log_type)
+        logger.setLevel(log_level)
+        if self.__validate_path(log_path) and handler is not None:
+            logger.addHandler(handler)
+        if self.__verbose_mode and console_handler is not None:
+            logger.addHandler(console_handler)
+        if log_path is not None or self.__verbose_mode is not False:
+            return logger
+        else:
+            return None
 
     def __connect_to_com_device(self):
         try:
@@ -134,6 +135,7 @@ class SmartMeter:
     def __log_info(self, message: string) -> None:
         if self.__info_logger is not None:
             self.__info_logger.info(message)
+
 
 '''
 # EVN Schlüssel eingeben zB. "36C66639E48A8CA4D6BC8B282A793BBB"
